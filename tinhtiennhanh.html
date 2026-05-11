@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tính Tiền Nhanh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./tinhtiennhanh.css?v=20260511-42">
+</head>
+<body>
+<main class="app" aria-label="Tính tiền nhanh">
+    <div class="top-row">
+        <section class="panel auto-panel" aria-label="Khung auto tính">
+            <div class="calc-viewport" id="calcViewport">
+                <div class="calc-track" id="calcTrack">
+                    <div class="calc-page auto-page">
+                        <div class="auto-grid" id="autoGrid"></div>
+                    </div>
+                    <div class="calc-page manual-page">
+                        <div class="manual-display">
+                            <div class="manual-metric">
+                                <span class="manual-label">Khách đưa</span>
+                                <strong class="manual-value" id="customerPaid">0đ</strong>
+                            </div>
+                            <div class="manual-metric">
+                                <span class="manual-label">Thối</span>
+                                <strong class="manual-value manual-change" id="manualChange">0đ</strong>
+                            </div>
+                        </div>
+                        <div class="cash-grid" id="cashGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel top-panel" aria-label="Khung tổng tiền">
+            <div class="order-column">
+                <div class="metric">
+                    <span class="metric-label">Tổng</span>
+                    <strong class="metric-value" id="orderTotal">0đ</strong>
+                </div>
+                <div class="order-summary" id="orderSummary" aria-label="Thống kê món đã chọn"></div>
+            </div>
+        </section>
+    </div>
+
+    <section class="panel products-panel" aria-label="Khung sản phẩm">
+        <div class="panel-head">
+            <h1 class="panel-title">Sản phẩm</h1>
+        </div>
+        <div class="product-grid" id="productGrid"></div>
+        <div class="product-clear-row">
+            <button class="clear-all" type="button" id="clearAll">❌ Clear All ❌</button>
+            <a class="home-link" href="https://tranthangminh.github.io/" aria-label="Về trang giới thiệu">WEB</a>
+        </div>
+    </section>
+</main>
+
+<script src="./tinhtiennhanh.js?v=20260511-42"></script>
+</body>
+</html>
