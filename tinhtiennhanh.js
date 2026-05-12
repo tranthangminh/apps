@@ -4,18 +4,17 @@ const products = [
     { name: "Trà đá", price: 2000, span: 2 },
     { name: "Nước suối", price: 6000, span: 2 },
     { name: "Nước ngọt", price: 15000, span: 2 },
-    { type: "label", name: "+Thịt", icon: "🥩", span: 2 },
+    { type: "label", name: "+Thịt", icon: "🥩", span: 3, optionCount: 3 },
     { name: "20k", key: "Thịt +20k", price: 20000, span: 1, compact: true },
     { name: "30k", key: "Thịt +30k", price: 30000, span: 1, compact: true },
     { name: "35k", key: "Thịt +35k", price: 35000, span: 1, compact: true },
-    { name: "40k", key: "Thịt +40k", price: 40000, span: 1, compact: true },
     { name: "Mộc lớn", price: 40000, span: 3 },
-    { name: "Mộc nhỏ", price: 35000, span: 3 },
+    { name: "Mộc nhỏ", price: 30000, span: 3 },
     { type: "label", name: "Khác", icon: "#️⃣", optionCount: 4 },
+    { name: "2k", key: "Khác 2k", price: 2000, span: 1, compact: true },
     { name: "3k", key: "Khác 3k", price: 3000, span: 1, compact: true },
     { name: "5k", key: "Khác 5k", price: 5000, span: 1, compact: true },
-    { name: "10k", key: "Khác 10k", price: 10000, span: 1, compact: true },
-    { name: "20k", key: "Khác 20k", price: 20000, span: 1, compact: true }
+    { name: "10k", key: "Khác 10k", price: 10000, span: 1, compact: true }
 ];
 
 const cashDenominations = [
@@ -168,14 +167,14 @@ function renderProducts() {
 
         if (product.type === "label") {
             const row = document.createElement("div");
-            row.className = "option-row";
+            const optionCount = product.optionCount || 4;
+            row.className = `option-row option-count-${optionCount}`;
 
             const label = document.createElement("div");
             label.className = "tile product-label";
             label.innerHTML = `<span class="tile-name">${product.icon ? `<span class="label-icon">${product.icon}</span>` : product.name}</span>`;
             row.appendChild(label);
 
-            const optionCount = product.optionCount || 4;
             products.slice(index + 1, index + optionCount + 1).forEach((optionProduct, offset) => {
                 row.appendChild(createProductTile(optionProduct, index + offset + 1));
             });

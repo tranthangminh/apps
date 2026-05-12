@@ -460,6 +460,10 @@ button {
     gap: 6px;
 }
 
+.option-row.option-count-3 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .auto-grid {
     min-height: 0;
     height: 100%;
