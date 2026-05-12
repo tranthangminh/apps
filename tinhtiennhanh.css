@@ -367,32 +367,6 @@ button {
     grid-column: span 3;
 }
 
-.tile.product-label {
-    align-items: center;
-    justify-content: center;
-    background: #3a3f43;
-    color: #fff;
-}
-
-.tile.product-label .tile-name {
-    width: auto;
-    writing-mode: horizontal-tb;
-    transform: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-    line-height: 1.05;
-    color: #fff;
-    white-space: normal;
-}
-
-.tile.product-label .label-icon {
-    display: block;
-    font-size: 2em;
-}
-
 .option-row {
     min-height: 0;
     grid-column: 1 / -1;
@@ -402,6 +376,14 @@ button {
 }
 
 .option-row.option-count-3 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.option-row.no-label.option-count-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.option-row.no-label.option-count-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -495,6 +477,24 @@ button {
     position: relative;
     padding: 0;
     width: 100%;
+    container-type: size;
+}
+
+.product-tile.has-bg-icon::before {
+    content: var(--tile-bg-icon);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 0;
+    transform: translate(-50%, -50%);
+    font-size: min(60cqh, 48px);
+    line-height: 1;
+    opacity: 0.24;
+    pointer-events: none;
+}
+
+.product-tile.has-bg-icon > * {
+    z-index: 1;
 }
 
 .product-add {
@@ -516,7 +516,8 @@ button {
     right: 0;
     top: 0;
     bottom: 0;
-    width: 42px;
+    width: 30%;
+    max-width: 60px;
     height: 100%;
     border-left: 1px solid rgba(51, 51, 51, 0.1);
     border-radius: 0 7px 7px 0;
@@ -536,7 +537,7 @@ button {
 
 .product-tile.is-compact .product-add {
     justify-content: flex-start;
-    padding-right: 29px;
+    padding-right: 48px;
 }
 
 .product-tile.is-compact .tile-name {
@@ -552,8 +553,7 @@ button {
 }
 
 .product-tile.is-compact .product-minus {
-    width: 24px;
-    font-size: 15px;
+    font-size: 19px;
 }
 
 @media (max-width: 900px) {
@@ -613,19 +613,8 @@ button {
         gap: 4px;
     }
 
-    .product-minus {
-        width: 42px;
-        height: 100%;
-        font-size: 19px;
-    }
-
     .product-tile.is-compact .product-add {
-        padding-right: 29px;
-    }
-
-    .product-tile.is-compact .product-minus {
-        width: 24px;
-        font-size: 15px;
+        padding-right: 48px;
     }
 
     .tile-name {
@@ -672,19 +661,8 @@ button {
         padding: 5px 44px 5px 5px;
     }
 
-    .product-minus {
-        width: 39px;
-        height: 100%;
-        font-size: 17px;
-    }
-
     .product-tile.is-compact .product-add {
-        padding-right: 27px;
-    }
-
-    .product-tile.is-compact .product-minus {
-        width: 22px;
-        font-size: 14px;
+        padding-right: 44px;
     }
 
     .tile-name {
@@ -742,19 +720,8 @@ button {
         gap: 2px;
     }
 
-    .product-minus {
-        width: 39px;
-        height: 100%;
-        font-size: 17px;
-    }
-
     .product-tile.is-compact .product-add {
-        padding-right: 27px;
-    }
-
-    .product-tile.is-compact .product-minus {
-        width: 22px;
-        font-size: 14px;
+        padding-right: 44px;
     }
 
     .tile-name {

@@ -1,20 +1,21 @@
 const products = [
-    { name: "Tô lớn", price: 55000, span: 3 },
-    { name: "Tô nhỏ", price: 40000, span: 3 },
-    { name: "Trà đá", price: 2000, span: 2 },
-    { name: "Nước suối", price: 6000, span: 2 },
-    { name: "Nước ngọt", price: 15000, span: 2 },
-    { type: "label", name: "+Thịt", icon: "🥩", optionCount: 3 },
-    { name: "20k", key: "Thịt +20k", price: 20000, span: 1, compact: true },
-    { name: "30k", key: "Thịt +30k", price: 30000, span: 1, compact: true },
-    { name: "35k", key: "Thịt +35k", price: 35000, span: 1, compact: true },
+    { name: "Tô lớn", price: 55000, span: 2 },
+    { name: "Tô nhỏ", price: 40000, span: 2 },
+    { name: "Tô đặc biệt", price: 90000, span: 2, bgIcon: "✨" },
+    { name: "Trà đá", price: 2000, span: 2, bgIcon: "🌿" },
+    { name: "Nước suối", price: 6000, span: 2, bgIcon: "💧" },
+    { name: "Nước ngọt", price: 15000, span: 2, bgIcon: "🥤" },
+    { type: "label", name: "+Thịt", optionCount: 3 },
+    { name: "20k", key: "Thịt +20k", price: 20000, span: 1, compact: true, bgIcon: "🥩" },
+    { name: "30k", key: "Thịt +30k", price: 30000, span: 1, compact: true, bgIcon: "🥩" },
+    { name: "35k", key: "Thịt +35k", price: 35000, span: 1, compact: true, bgIcon: "🥩" },
     { name: "Mộc lớn", price: 40000, span: 3 },
     { name: "Mộc nhỏ", price: 30000, span: 3 },
-    { type: "label", name: "Khác", icon: "#️⃣", optionCount: 4 },
-    { name: "2k", key: "Khác 2k", price: 2000, span: 1, compact: true },
-    { name: "3k", key: "Khác 3k", price: 3000, span: 1, compact: true },
-    { name: "5k", key: "Khác 5k", price: 5000, span: 1, compact: true },
-    { name: "10k", key: "Khác 10k", price: 10000, span: 1, compact: true }
+    { type: "label", name: "Khác", optionCount: 4 },
+    { name: "2k", key: "Khác 2k", price: 2000, span: 1, compact: true, bgIcon: "➕" },
+    { name: "3k", key: "Khác 3k", price: 3000, span: 1, compact: true, bgIcon: "➕" },
+    { name: "5k", key: "Khác 5k", price: 5000, span: 1, compact: true, bgIcon: "➕" },
+    { name: "10k", key: "Khác 10k", price: 10000, span: 1, compact: true, bgIcon: "➕" }
 ];
 
 const cashDenominations = [
@@ -151,7 +152,10 @@ function renderProducts() {
         const productKey = getProductKey(product);
         const count = state.productCounts.get(productKey) || 0;
         const tile = document.createElement("div");
-        tile.className = `tile product-tile product-span-${product.span}${product.compact ? " is-compact" : ""}${count > 0 ? " is-added" : ""}`;
+        tile.className = `tile product-tile product-span-${product.span}${product.compact ? " is-compact" : ""}${product.bgIcon ? " has-bg-icon" : ""}${count > 0 ? " is-added" : ""}`;
+        if (product.bgIcon) {
+            tile.style.setProperty("--tile-bg-icon", `"${product.bgIcon}"`);
+        }
         tile.innerHTML = `
             <button class="product-add" type="button" data-action="add" data-index="${index}" aria-label="Cộng ${productKey}">
                 <span class="tile-name">${product.name}${count > 0 ? `<span class="product-count">x${count}</span>` : ""}</span>
@@ -168,12 +172,7 @@ function renderProducts() {
         if (product.type === "label") {
             const row = document.createElement("div");
             const optionCount = product.optionCount || 4;
-            row.className = `option-row option-count-${optionCount}`;
-
-            const label = document.createElement("div");
-            label.className = "tile product-label";
-            label.innerHTML = `<span class="tile-name">${product.icon ? `<span class="label-icon">${product.icon}</span>` : product.name}</span>`;
-            row.appendChild(label);
+            row.className = `option-row option-count-${optionCount} no-label`;
 
             products.slice(index + 1, index + optionCount + 1).forEach((optionProduct, offset) => {
                 row.appendChild(createProductTile(optionProduct, index + offset + 1));
