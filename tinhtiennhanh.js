@@ -4,7 +4,7 @@ const products = [
     { name: "Trà đá", price: 2000, span: 2 },
     { name: "Nước suối", price: 6000, span: 2 },
     { name: "Nước ngọt", price: 15000, span: 2 },
-    { type: "label", name: "+Thịt", icon: "🥩", span: 3, optionCount: 3 },
+    { type: "label", name: "+Thịt", icon: "🥩", optionCount: 3 },
     { name: "20k", key: "Thịt +20k", price: 20000, span: 1, compact: true },
     { name: "30k", key: "Thịt +30k", price: 30000, span: 1, compact: true },
     { name: "35k", key: "Thịt +35k", price: 35000, span: 1, compact: true },
