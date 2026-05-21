@@ -1,0 +1,286 @@
+.table-view {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    display: grid;
+}
+
+.table-layout {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.table-column {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.table-column-left {
+    grid-column: 1;
+    grid-row: 1 / span 5;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+}
+
+.table-column-right {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+}
+
+.table-button {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: var(--shadow);
+    color: var(--text-main);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+}
+
+.table-button:hover,
+.table-button:focus-visible {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(11, 93, 87, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+    outline: none;
+}
+
+.table-button:active {
+    transform: translateY(1px);
+}
+
+.table-button.is-active-order {
+    border-color: rgba(217, 119, 6, 0.25);
+    background: linear-gradient(135deg, rgba(255, 243, 205, 0.85) 0%, rgba(255, 227, 144, 0.8) 100%);
+    box-shadow: 0 8px 24px rgba(217, 119, 6, 0.12);
+}
+
+.table-button.is-active-order:hover {
+    border-color: rgba(217, 119, 6, 0.4);
+    background: linear-gradient(135deg, rgba(255, 243, 205, 0.95) 0%, rgba(255, 227, 144, 0.9) 100%);
+    box-shadow: 0 12px 30px rgba(217, 119, 6, 0.18);
+}
+
+.table-button.is-paid-order {
+    border-color: rgba(16, 185, 129, 0.25);
+    background: linear-gradient(135deg, rgba(209, 250, 229, 0.85) 0%, rgba(167, 243, 208, 0.8) 100%);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+}
+
+.table-button.is-paid-order:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, rgba(209, 250, 229, 0.95) 0%, rgba(167, 243, 208, 0.9) 100%);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.18);
+}
+
+/* Left column containing table name and total price */
+.table-left-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    text-align: center;
+}
+
+.table-button.is-active-order .table-left-info,
+.table-button.is-paid-order .table-left-info {
+    width: auto;
+    min-width: 75px;
+    align-items: flex-start;
+    justify-content: space-between;
+    text-align: left;
+    padding: 10px 6px 10px 12px;
+}
+
+.table-name {
+    width: 100%;
+    font-size: clamp(28px, 5.6vw, 36px);
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+    color: var(--text-main);
+    opacity: 0.85;
+}
+
+.table-button.is-active-order .table-name {
+    font-size: clamp(16px, 3.2vw, 22px);
+    color: #78350f;
+    opacity: 0.9;
+}
+
+.table-button.is-paid-order .table-name {
+    font-size: clamp(16px, 3.2vw, 22px);
+    color: #064e3b;
+    opacity: 0.9;
+}
+
+/* Middle column containing the order summary list */
+.table-summary-col {
+    display: none;
+}
+
+.table-button.is-active-order .table-summary-col,
+.table-button.is-paid-order .table-summary-col {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    border-left: 1px dashed rgba(51, 51, 51, 0.08);
+}
+
+.table-button.is-active-order .table-summary-col {
+    border-left-color: rgba(120, 53, 15, 0.15);
+}
+
+.table-button.is-paid-order .table-summary-col {
+    border-left-color: rgba(6, 78, 59, 0.15);
+}
+
+.table-summary {
+    width: 100%;
+    color: var(--text-soft);
+    font-family: "Barlow Condensed", "Montserrat", sans-serif;
+    font-size: clamp(11px, 2.2vw, 14px);
+    font-weight: 700;
+    line-height: 1.05;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    text-align: left;
+}
+
+.table-button.is-active-order .table-summary {
+    color: #78350f;
+}
+
+.table-button.is-paid-order .table-summary {
+    color: #064e3b;
+}
+
+/* Right column containing the stacked action buttons */
+.table-total {
+    width: 100%;
+    color: var(--text-main);
+    font-size: clamp(24px, 4.8vw, 30px);
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-button.is-active-order .table-total {
+    color: #b45309;
+}
+
+.table-button.is-paid-order .table-total {
+    color: #0b5d57;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.table-actions {
+    display: none;
+}
+
+.table-button.is-active-order .table-actions,
+.table-button.is-paid-order .table-actions {
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    width: 30%;
+    border-left: 1px solid rgba(51, 51, 51, 0.08);
+}
+
+.table-button.is-active-order .table-actions {
+    border-left-color: rgba(120, 53, 15, 0.15);
+}
+
+.table-button.is-paid-order .table-actions {
+    border-left-color: rgba(6, 78, 59, 0.15);
+}
+
+.table-action {
+    min-width: 0;
+    min-height: 0;
+    border: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.action-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.table-pay {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+}
+
+.table-pay:hover:not(:disabled) {
+    background: rgba(16, 185, 129, 0.25);
+    color: #047857;
+}
+
+.table-pay:active:not(:disabled) {
+    background: rgba(16, 185, 129, 0.35);
+}
+
+.table-finish {
+    border-top: 1px solid rgba(51, 51, 51, 0.06);
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+}
+
+.table-finish:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    color: #b91c1c;
+}
+
+.table-finish:active:not(:disabled) {
+    background: rgba(239, 68, 68, 0.35);
+}
+
+.table-action:disabled {
+    cursor: default;
+    opacity: 0.15;
+    background: transparent;
+}
+
+.table-button-outside {
+    grid-column: 1;
+    grid-row: 6;
+}

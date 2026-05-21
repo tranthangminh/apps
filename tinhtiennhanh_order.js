@@ -44,6 +44,7 @@ const autoMilestoneMap = [
 ];
 
 const state = {
+    activeTable: null,
     orderTotal: 0,
     productCounts: new Map(),
     customerPaid: 0,
@@ -51,7 +52,8 @@ const state = {
     calcMode: "auto"
 };
 
-const storageKey = "fastFoodCalculatorOrder";
+const storageKeyPrefix = "fastFoodCalculatorOrder";
+const paidStorageKeyPrefix = "fastFoodCalculatorPaid";
 const calcModeStorageKey = "fastFoodCalculatorMode";
 
 const orderTotalEl = document.getElementById("orderTotal");
@@ -72,6 +74,14 @@ function getProductKey(product) {
     return product.key || product.name;
 }
 
+function getOrderStorageKey(tableId = state.activeTable) {
+    return tableId ? `${storageKeyPrefix}:${tableId}` : null;
+}
+
+function getPaidStorageKey(tableId = state.activeTable) {
+    return tableId ? `${paidStorageKeyPrefix}:${tableId}` : null;
+}
+
 function calculateOrderTotal() {
     return products.reduce((total, product) => {
         if (product.type === "label") return total;
@@ -82,18 +92,101 @@ function calculateOrderTotal() {
     }, 0);
 }
 
-function saveOrder() {
+function calculateCountsTotal(counts) {
+    return products.reduce((total, product) => {
+        if (product.type === "label") return total;
+
+        const productKey = getProductKey(product);
+        const count = Number(counts[productKey]) || 0;
+        return total + product.price * count;
+    }, 0);
+}
+
+function getTableSnapshot(tableId) {
+    const storageKey = getOrderStorageKey(tableId);
+    const emptySnapshot = { items: [], total: 0, hasOrder: false, isPaid: false };
+    if (!storageKey) return emptySnapshot;
+
+    const savedOrder = localStorage.getItem(storageKey);
+    if (!savedOrder) return emptySnapshot;
+
+    try {
+        const parsedOrder = JSON.parse(savedOrder);
+        const counts = parsedOrder?.counts || {};
+        const items = products
+            .filter((product) => product.type !== "label")
+            .map((product) => {
+                const productKey = getProductKey(product);
+                const count = Number(counts[productKey]) || 0;
+                return { count, name: productKey };
+            })
+            .filter((item) => item.count > 0);
+        const total = calculateCountsTotal(counts);
+
+        return {
+            items,
+            total,
+            hasOrder: items.length > 0,
+            isPaid: items.length > 0 && localStorage.getItem(getPaidStorageKey(tableId)) === "1"
+        };
+    } catch {
+        localStorage.removeItem(storageKey);
+        return emptySnapshot;
+    }
+}
+
+function clearTableOrder(tableId) {
+    const storageKey = getOrderStorageKey(tableId);
+    if (!storageKey) return;
+
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(getPaidStorageKey(tableId));
+
+    if (state.activeTable === tableId) {
+        state.orderTotal = 0;
+        state.productCounts.clear();
+        state.customerPaid = 0;
+        state.cashHistory = [];
+        renderProducts();
+        renderTotals();
+    }
+}
+
+function markTablePaid(tableId) {
+    const snapshot = getTableSnapshot(tableId);
+    if (!snapshot.hasOrder) return;
+
+    localStorage.setItem(getPaidStorageKey(tableId), "1");
+}
+
+function markCurrentOrderUnpaid() {
+    const paidStorageKey = getPaidStorageKey();
+    if (paidStorageKey) localStorage.removeItem(paidStorageKey);
+}
+
+function saveOrder(markUnpaid = false) {
+    const storageKey = getOrderStorageKey();
+    if (!storageKey) return;
+
     const counts = Object.fromEntries(state.productCounts);
 
     if (Object.keys(counts).length === 0) {
         localStorage.removeItem(storageKey);
+        localStorage.removeItem(getPaidStorageKey());
         return;
     }
 
     localStorage.setItem(storageKey, JSON.stringify({ counts }));
+    if (markUnpaid) markCurrentOrderUnpaid();
 }
 
 function loadOrder() {
+    state.orderTotal = 0;
+    state.productCounts.clear();
+
+    const storageKey = getOrderStorageKey();
+    if (!storageKey) return;
+
     const savedOrder = localStorage.getItem(storageKey);
     if (!savedOrder) return;
 
@@ -112,6 +205,15 @@ function loadOrder() {
     } catch {
         localStorage.removeItem(storageKey);
     }
+}
+
+function setActiveTable(tableId) {
+    state.activeTable = tableId;
+    state.customerPaid = 0;
+    state.cashHistory = [];
+    loadOrder();
+    renderProducts();
+    renderTotals();
 }
 
 function loadCalcMode() {
@@ -224,18 +326,21 @@ function renderAutoOptions() {
 
     const values = getAutoCashValues(state.orderTotal);
     const groups = [...new Set(values.map((value) => Math.floor(value / 100000)))].sort((a, b) => a - b);
-    const groupColumns = new Map(groups.map((group, index) => [group, index + 1]));
-    const columnCounts = new Map();
+    const groupRows = new Map(groups.map((group, index) => [group, index + 1]));
+    const groupOptionCounts = new Map();
 
     values.forEach((value) => {
         const returnValue = value - state.orderTotal;
         const groupIndex = Math.floor(value / 100000);
-        const columnIndex = groupColumns.get(groupIndex);
-        const rowIndex = (columnCounts.get(columnIndex) || 0) + 1;
+        const rowIndex = groupRows.get(groupIndex);
+        const isRoundHundred = value % 100000 === 0;
+        const columnIndex = isRoundHundred ? 1 : (groupOptionCounts.get(groupIndex) || 0) + 2;
 
-        if (!columnIndex || columnIndex > 4 || rowIndex > 4) return;
+        if (!rowIndex || rowIndex > 4 || columnIndex > 4) return;
 
-        columnCounts.set(columnIndex, rowIndex);
+        if (!isRoundHundred) {
+            groupOptionCounts.set(groupIndex, columnIndex - 1);
+        }
 
         const option = document.createElement("div");
         option.className = "tile auto-option";
@@ -345,7 +450,7 @@ productGridEl.addEventListener("click", (event) => {
 
     renderProducts();
     renderTotals();
-    saveOrder();
+    saveOrder(true);
 });
 
 cashGridEl.addEventListener("click", (event) => {
@@ -376,7 +481,10 @@ document.getElementById("clearAll").addEventListener("click", () => {
     state.productCounts.clear();
     state.customerPaid = 0;
     state.cashHistory = [];
-    localStorage.removeItem(storageKey);
+    const storageKey = getOrderStorageKey();
+    if (storageKey) localStorage.removeItem(storageKey);
+    const paidStorageKey = getPaidStorageKey();
+    if (paidStorageKey) localStorage.removeItem(paidStorageKey);
     renderProducts();
     renderTotals();
 });
@@ -401,9 +509,18 @@ calcViewportEl.addEventListener("pointerup", (event) => {
     handleSwipe(swipeStartX, event.clientX);
 });
 
-loadOrder();
-loadCalcMode();
-renderCashGrid();
-renderProducts();
-renderTotals();
-setCalcMode(state.calcMode);
+function initOrder() {
+    loadCalcMode();
+    renderCashGrid();
+    setCalcMode(state.calcMode);
+}
+
+window.TinhTienOrder = {
+    clearTableOrder,
+    getTableSnapshot,
+    initOrder,
+    markTablePaid,
+    saveCurrentOrder: () => saveOrder(false),
+    setActiveTable,
+    shortMoney
+};
