@@ -179,19 +179,71 @@
         }
     }
 
+    function mergeStates(local, server) {
+        if (!server) return local;
+        if (!local) return server;
+
+        const activeTable = (typeof window.TinhTienOrder === "object" && typeof window.TinhTienOrder.getActiveTable === "function")
+            ? window.TinhTienOrder.getActiveTable()
+            : null;
+
+        const mergedOrders = { ...(server.orders || {}) };
+        if (local.orders) {
+            Object.entries(local.orders).forEach(([id, order]) => {
+                if (id === activeTable || !server.orders || !server.orders[id]) {
+                    mergedOrders[id] = order;
+                }
+            });
+        }
+
+        const mergedPaid = { ...(server.paid || {}) };
+        if (local.paid) {
+            Object.entries(local.paid).forEach(([id, status]) => {
+                if (id === activeTable || !server.paid || !server.paid[id]) {
+                    mergedPaid[id] = status;
+                }
+            });
+        }
+
+        const historyMap = new Map();
+        (local.history || []).forEach(item => historyMap.set(item.id, item));
+        (server.history || []).forEach(item => historyMap.set(item.id, item));
+        const mergedHistory = [...historyMap.values()].sort((a, b) => b.id - a.id);
+
+        return {
+            orders: mergedOrders,
+            paid: mergedPaid,
+            history: mergedHistory,
+            calcMode: local.calcMode || server.calcMode || "auto"
+        };
+    }
+
+    function mergePendingServerData() {
+        if (!localDataPendingUpdate) return;
+        const localData = getLocalDataState();
+        const mergedData = mergeStates(localData, localDataPendingUpdate);
+        setLocalDataState(mergedData);
+        localDataPendingUpdate = null;
+    }
+
     function applyFirebaseData(data) {
         localDataPendingUpdate = null;
         const localData = getLocalDataState();
+        const mergedData = mergeStates(localData, data);
         
-        // Compare states to avoid unnecessary redraws
-        if (JSON.stringify(localData) === JSON.stringify(data)) {
-            updateStatusUI("synced", "Đồng bộ thành công!");
-            return;
+        const localChanged = JSON.stringify(localData) !== JSON.stringify(mergedData);
+        const serverChanged = JSON.stringify(data) !== JSON.stringify(mergedData);
+
+        if (localChanged) {
+            setLocalDataState(mergedData);
+            refreshAllViews();
         }
-        
-        setLocalDataState(data);
-        updateStatusUI("synced", "Đồng bộ thành công!");
-        refreshAllViews();
+
+        if (serverChanged) {
+            pushToFirebase();
+        } else {
+            updateStatusUI("synced", "Đồng bộ thành công!");
+        }
     }
 
     function handleFirebaseUpdate(snapshot) {
@@ -220,7 +272,7 @@
         applyFirebaseData(data);
     }
 
-    async function initFirebase() {
+    async function initFirebase(bypassActiveCheck = false) {
         if (dbRef) {
             dbRef.off();
             dbRef = null;
@@ -253,27 +305,69 @@
             config.databaseURL = `https://${config.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
         }
 
-        try {
-            if (typeof firebase === "undefined") {
-                throw new Error("Không thể tải thư viện Firebase. Kiểm tra kết nối mạng.");
-            }
-            
-            if (firebase.apps.length === 0) {
-                firebaseApp = firebase.initializeApp(config);
-            } else {
-                firebaseApp = firebase.app();
-            }
+        return new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+                console.warn("Firebase first load timed out");
+                resolve();
+            }, 4500);
 
-            updateStatusUI("syncing", "Đang kết nối Firebase...");
-            dbRef = firebase.database().ref(nodePath);
-            dbRef.on("value", handleFirebaseUpdate, (error) => {
-                console.error("Firebase connection error:", error);
-                updateStatusUI("error", `Lỗi kết nối: ${error.message}`);
-            });
-        } catch (e) {
-            console.error("Firebase initialization failed:", e);
-            updateStatusUI("error", `Lỗi khởi tạo: ${e.message}`);
-        }
+            try {
+                if (typeof firebase === "undefined") {
+                    throw new Error("Không thể tải thư viện Firebase. Kiểm tra kết nối mạng.");
+                }
+                
+                if (firebase.apps.length === 0) {
+                    firebaseApp = firebase.initializeApp(config);
+                } else {
+                    firebaseApp = firebase.app();
+                }
+
+                updateStatusUI("syncing", "Đang kết nối Firebase...");
+                dbRef = firebase.database().ref(nodePath);
+
+                let isFirstLoad = true;
+                dbRef.on("value", (snapshot) => {
+                    if (isFirstLoad) {
+                        isFirstLoad = false;
+                        clearTimeout(timeoutId);
+                        const data = snapshot.val();
+                        
+                        // Check if user has active order or has interacted to avoid disrupting them on load
+                        const isUserActive = isOrderViewActive() || lastInteractionTime > 0;
+                        
+                        if (data) {
+                            if (isUserActive && !bypassActiveCheck) {
+                                // If user is active and we shouldn't bypass, queue it
+                                localDataPendingUpdate = data;
+                                updateStatusUI("synced", "Đồng bộ sẵn sàng (Chờ rảnh)");
+                            } else {
+                                // Otherwise apply immediately
+                                applyFirebaseData(data);
+                            }
+                        } else {
+                            updateStatusUI("synced", "Đã kết nối (Firebase trống)");
+                            const localData = getLocalDataState();
+                            if (localData && (Object.keys(localData.orders || {}).length > 0 || (localData.history && localData.history.length > 0))) {
+                                pushToFirebase();
+                            }
+                        }
+                        resolve();
+                    } else {
+                        handleFirebaseUpdate(snapshot);
+                    }
+                }, (error) => {
+                    console.error("Firebase connection error:", error);
+                    updateStatusUI("error", `Lỗi kết nối: ${error.message}`);
+                    clearTimeout(timeoutId);
+                    resolve();
+                });
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                updateStatusUI("error", `Lỗi khởi tạo: ${e.message}`);
+                clearTimeout(timeoutId);
+                resolve();
+            }
+        });
     }
 
     async function pullFromFirebase() {
@@ -301,6 +395,10 @@
         writePending = false;
 
         updateStatusUI("syncing", "Đang tự động lưu...");
+        
+        // Merge any pending server data before reading the local state to push
+        mergePendingServerData();
+
         const localData = getLocalDataState();
         try {
             await dbRef.set(localData);
@@ -467,7 +565,7 @@
 
                 saveFirebaseConfig(configVal, pathVal);
                 updateStatusUI("syncing", "Đang kết nối lại Firebase...");
-                await initFirebase();
+                await initFirebase(true);
                 alert("Đã lưu cấu hình Firebase thành công!");
             });
         }
