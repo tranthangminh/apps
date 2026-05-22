@@ -1,5 +1,13 @@
 {
-  "orders": {},
+  "orders": {
+    "11": {
+      "counts": {
+        "Tô lớn": 2,
+        "Trà đá": 1,
+        "Thịt +30k": 1
+      }
+    }
+  },
   "paid": {},
   "history": [],
   "calcMode": "auto"
