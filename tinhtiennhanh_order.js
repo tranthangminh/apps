@@ -135,7 +135,52 @@ function getTableSnapshot(tableId) {
     }
 }
 
+function getHistory() {
+    try {
+        return JSON.parse(localStorage.getItem("fastFoodCalculatorHistory")) || [];
+    } catch {
+        return [];
+    }
+}
+
+function clearHistory() {
+    localStorage.removeItem("fastFoodCalculatorHistory");
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
+}
+
+function deleteHistoryItem(id) {
+    const history = getHistory();
+    const updated = history.filter((item) => item.id !== id);
+    localStorage.setItem("fastFoodCalculatorHistory", JSON.stringify(updated));
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
+}
+
+function saveToHistory(tableId, total, summary = "") {
+    if (total <= 0) return;
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    
+    const history = getHistory();
+    history.unshift({
+        id: Date.now(),
+        tableId: isNaN(tableId) ? tableId : Number(tableId),
+        total,
+        summary,
+        time: timeStr,
+        date: dateStr
+    });
+    
+    localStorage.setItem("fastFoodCalculatorHistory", JSON.stringify(history));
+}
+
 function clearTableOrder(tableId) {
+    const snapshot = getTableSnapshot(tableId);
+    if (snapshot.hasOrder) {
+        const summaryText = snapshot.items.map((item) => `${item.count} ${item.name}`).join(", ");
+        saveToHistory(tableId, snapshot.total, summaryText);
+    }
+
     const storageKey = getOrderStorageKey(tableId);
     if (!storageKey) return;
 
@@ -150,6 +195,7 @@ function clearTableOrder(tableId) {
         renderProducts();
         renderTotals();
     }
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
 }
 
 function markTablePaid(tableId) {
@@ -157,6 +203,7 @@ function markTablePaid(tableId) {
     if (!snapshot.hasOrder) return;
 
     localStorage.setItem(getPaidStorageKey(tableId), "1");
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
 }
 
 function markCurrentOrderUnpaid() {
@@ -173,11 +220,13 @@ function saveOrder(markUnpaid = false) {
     if (Object.keys(counts).length === 0) {
         localStorage.removeItem(storageKey);
         localStorage.removeItem(getPaidStorageKey());
+        if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
         return;
     }
 
     localStorage.setItem(storageKey, JSON.stringify({ counts }));
     if (markUnpaid) markCurrentOrderUnpaid();
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
 }
 
 function loadOrder() {
@@ -411,6 +460,7 @@ function setCalcMode(mode) {
     state.calcMode = mode;
     calcTrackEl.classList.toggle("is-manual", mode === "manual");
     localStorage.setItem(calcModeStorageKey, mode);
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
 }
 
 function handleSwipe(startX, endX) {
@@ -487,6 +537,7 @@ document.getElementById("clearAll").addEventListener("click", () => {
     if (paidStorageKey) localStorage.removeItem(paidStorageKey);
     renderProducts();
     renderTotals();
+    if (window.TinhTienGitHub) window.TinhTienGitHub.syncToCloud();
 });
 
 let swipeStartX = 0;
@@ -522,5 +573,9 @@ window.TinhTienOrder = {
     markTablePaid,
     saveCurrentOrder: () => saveOrder(false),
     setActiveTable,
-    shortMoney
+    shortMoney,
+    getHistory,
+    clearHistory,
+    deleteHistoryItem,
+    getActiveTable: () => state.activeTable
 };

@@ -1,0 +1,209 @@
+.history-view, .stats-view {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-width: 0;
+    min-height: 0;
+    height: calc(100% - 7vh);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.history-floating-clear {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 14px rgba(180, 35, 24, 0.35);
+    z-index: 100;
+    cursor: pointer;
+    overflow: hidden;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    padding: 0;
+}
+
+.history-floating-clear .clear-icon {
+    font-size: 24px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.history-floating-clear .clear-text {
+    font-size: 15px;
+    font-weight: 700;
+    opacity: 0;
+    max-width: 0;
+    transition: opacity 0.2s ease, max-width 0.2s ease, margin-left 0.2s ease;
+    overflow: hidden;
+}
+
+/* Expanded state */
+.history-floating-clear.is-expanded {
+    width: 140px;
+    border-radius: 26px;
+    padding: 0 16px;
+}
+
+.history-floating-clear.is-expanded .clear-text {
+    opacity: 1;
+    max-width: 80px;
+    margin-left: 8px;
+}
+
+.history-floating-clear:active {
+    background: #991b1b;
+    transform: scale(0.95);
+}
+
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 7px 0 76px 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.history-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    flex-shrink: 0;
+}
+
+.history-card-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.history-info-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+}
+
+.history-table-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: #24282b;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.history-total {
+    font-size: clamp(19px, 3.8vw, 23px);
+    font-weight: 800;
+    color: var(--accent-strong);
+    font-family: "Montserrat", sans-serif;
+}
+
+.history-card-middle {
+    flex: 1;
+    margin: 0 10px;
+    min-width: 0;
+}
+
+.history-summary {
+    font-size: clamp(12px, 2.4vw, 15px);
+    color: var(--text-soft);
+    font-weight: 700;
+    font-family: "Barlow Condensed", "Montserrat", sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
+}
+
+.history-datetime {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+}
+
+.history-time {
+    font-size: 12px;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.history-date {
+    font-size: 9px;
+    color: var(--text-soft);
+    font-weight: 600;
+}
+
+.history-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-soft);
+    font-weight: 600;
+    font-size: 16px;
+    background: var(--panel-bg);
+    border: 1px dashed var(--panel-border);
+    border-radius: 8px;
+}
+
+
+
+.history-card-right {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.history-card-delete {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    font-size: 18px;
+    padding: 0;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 0;
+}
+
+.delete-mode-active .history-card-delete {
+    width: 32px;
+    opacity: 1;
+    padding: 6px;
+    margin-left: 14px;
+}
+
+.history-card-delete:active {
+    background: rgba(180, 35, 24, 0.1);
+}

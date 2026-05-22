@@ -36,17 +36,38 @@ function renderTables() {
     tableViewEl.querySelectorAll("[data-table]").forEach(renderTableButton);
 }
 
+function showView(viewId) {
+    const views = ["tableView", "orderView", "historyView", "statsView", "settingsView"];
+    views.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.toggle("is-hidden", id !== viewId);
+        }
+    });
+
+    const menuBtns = {
+        tableView: "tablesBtn",
+        historyView: "historyBtn",
+        statsView: "statsBtn",
+        settingsView: "settingsBtn"
+    };
+    Object.entries(menuBtns).forEach(([vId, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.classList.toggle("is-active", vId === viewId);
+        }
+    });
+}
+
 function showTableView() {
     renderTables();
-    orderViewEl.classList.add("is-hidden");
-    tableViewEl.classList.remove("is-hidden");
+    showView("tableView");
 }
 
 function showOrderView(tableId) {
     window.TinhTienOrder.setActiveTable(tableId);
-    tableBackEl.textContent = `Bàn ${tableId}`;
-    tableViewEl.classList.add("is-hidden");
-    orderViewEl.classList.remove("is-hidden");
+    tableBackEl.textContent = `⤶ Bàn ${tableId}`;
+    showView("orderView");
 }
 
 tableViewEl.addEventListener("click", (event) => {
@@ -85,5 +106,33 @@ tableBackEl.addEventListener("click", () => {
     showTableView();
 });
 
+// Swipe right (left → right) on order view to go back to table view
+(function () {
+    let startX = 0;
+    let startY = 0;
+
+    orderViewEl.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    orderViewEl.addEventListener("touchend", (e) => {
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        // Vuốt phải >= 60px, và vuốt dọc < 60px để tránh nhầm lẫn
+        if (dx > 60 && Math.abs(dy) < 60) {
+            window.TinhTienOrder.saveCurrentOrder();
+            showTableView();
+        }
+    }, { passive: true });
+})();
+
+const tablesBtn = document.getElementById("tablesBtn");
+if (tablesBtn) {
+    tablesBtn.addEventListener("click", showTableView);
+}
+
 window.TinhTienOrder.initOrder();
+window.renderTables = renderTables;
+window.showView = showView;
 showTableView();

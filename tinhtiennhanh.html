@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tính Tiền Nhanh</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,25 +10,28 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./tinhtiennhanh_order.css?v=20260521-15">
 <link rel="stylesheet" href="./tinhtiennhanh_table.css?v=20260521-15">
+<link rel="stylesheet" href="./tinhtiennhanh-history.css?v=20260521-15">
+<link rel="stylesheet" href="./tinhtiennhanh-stats.css?v=20260521-15">
+<link rel="stylesheet" href="./tinhtiennhanh-settings.css?v=20260521-15">
 </head>
 <body>
 <main class="app" aria-label="Tính tiền nhanh">
-    <section class="table-view" id="tableView" aria-label="Chọn bàn">
+    <section class="table-view" id="tableView" aria-label="Chọn bàn" style="position: relative;">
         <div class="table-layout">
             <div class="table-column table-column-left">
-                <div class="table-button" role="button" tabindex="0" data-table="cuối"></div>
+                <div class="table-button" role="button" tabindex="0" data-table="11"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="10"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="9"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="8"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="7"></div>
             </div>
             <div class="table-column table-column-right">
-                <div class="table-button" role="button" tabindex="0" data-table="tròn"></div>
+                <div class="table-button" role="button" tabindex="0" data-table="4"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="3"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="2"></div>
                 <div class="table-button" role="button" tabindex="0" data-table="1"></div>
             </div>
-            <div class="table-button table-button-outside" role="button" tabindex="0" data-table="ngoài"></div>
+            <div class="table-button table-button-outside" role="button" tabindex="0" data-table="0"></div>
         </div>
     </section>
 
@@ -71,15 +74,67 @@
         <section class="panel products-panel" aria-label="Khung sản phẩm">
             <div class="product-grid" id="productGrid"></div>
             <div class="product-clear-row">
+                <button class="table-back" type="button" id="tableBack">⤶</button>
                 <button class="clear-all" type="button" id="clearAll">❌ Xóa hết ❌</button>
-                <button class="table-back" type="button" id="tableBack">Bàn</button>
-                <a class="home-link" href="https://tranthangminh.github.io/" aria-label="Về trang giới thiệu">WEB</a>
             </div>
         </section>
     </section>
+
+    <section class="history-view is-hidden" id="historyView" aria-label="Lịch sử giao dịch" style="position: relative;">
+        <div class="history-list" id="historyList"></div>
+        <button class="history-floating-clear" id="historyClear" aria-label="Xóa tất cả lịch sử">
+            <span class="clear-icon">🗑️</span>
+            <span class="clear-text">Xóa hết</span>
+        </button>
+    </section>
+
+    <section class="stats-view is-hidden" id="statsView" aria-label="Thống kê">
+        <div class="stats-content" id="statsContent"></div>
+    </section>
+<!-- Fixed bottom menu -->
+<div class="fixed-menu">
+    <button class="menu-item" id="tablesBtn">Bàn</button>
+    <button class="menu-item" id="historyBtn">Lịch sử</button>
+    <button class="menu-item" id="statsBtn">Thống kê</button>
+    <button class="menu-item" id="settingsBtn">Cài đặt</button>
+</div>
+
+    <section class="settings-view is-hidden" id="settingsView" aria-label="Cài đặt">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h3>Cài đặt GitHub Sync</h3>
+            </div>
+            <div class="settings-body">
+                <div class="settings-group">
+                    <label for="ghToken">Personal Access Token (PAT)</label>
+                    <input type="password" id="ghToken" placeholder="github_pat_...">
+                </div>
+                <div class="settings-group">
+                    <label for="ghRepo">Repository Name</label>
+                    <input type="text" id="ghRepo" placeholder="tranthangminh/apps">
+                </div>
+                <div class="settings-group">
+                    <label for="ghBranch">Branch</label>
+                    <input type="text" id="ghBranch" value="main" placeholder="main">
+                </div>
+                <div class="settings-group">
+                    <label for="ghPath">Filename Path</label>
+                    <input type="text" id="ghPath" value="tinhtiennhanh/data.json" placeholder="tinhtiennhanh/data.json">
+                </div>
+                <div class="settings-status" id="settingsStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Chưa cấu hình đồng bộ</span>
+                </div>
+                <button class="settings-save-btn" id="settingsSaveBtn" type="button">Lưu Cấu Hình</button>
+            </div>
+        </div>
+    </section>
 </main>
 
+<script src="./tinhtiennhanh-settings.js?v=20260521-15"></script>
 <script src="./tinhtiennhanh_order.js?v=20260521-15"></script>
 <script src="./tinhtiennhanh_table.js?v=20260521-15"></script>
+<script src="./tinhtiennhanh-history.js?v=20260521-15"></script>
+<script src="./tinhtiennhanh-stats.js?v=20260521-15"></script>
 </body>
 </html>
