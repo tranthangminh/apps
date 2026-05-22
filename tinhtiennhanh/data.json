@@ -1,10 +1,9 @@
 {
   "orders": {
-    "10": {
+    "8": {
       "counts": {
-        "Tô lớn": 2,
         "Trà đá": 1,
-        "Nước suối": 1
+        "Tô lớn": 2
       }
     },
     "11": {
@@ -16,6 +15,15 @@
     }
   },
   "paid": {},
-  "history": [],
+  "history": [
+    {
+      "id": 1779424864146,
+      "tableId": 1,
+      "total": 112000,
+      "summary": "2 Tô lớn, 1 Trà đá",
+      "time": "11:41",
+      "date": "22/05/2026"
+    }
+  ],
   "calcMode": "auto"
 }
