@@ -45,6 +45,15 @@
     font-size: clamp(14px, 2vw, 18px);
     font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.fixed-menu .menu-item .menu-status-dot {
+    width: 8px;
+    height: 8px;
 }
 
 /* optional separator */

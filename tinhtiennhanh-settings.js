@@ -10,9 +10,10 @@
     let debounceTimeout = null;
     let isPushing = false;
     let pushPending = false;
+    let pollInterval = null;
 
     // Elements
-    let settingsBtn, tokenInput, repoInput, branchInput, pathInput, statusDot, statusText, saveBtn;
+    let settingsBtn, tokenInput, repoInput, branchInput, pathInput, statusDot, statusText, saveBtn, menuStatusDot;
 
     function getGitHubConfig() {
         return {
@@ -48,9 +49,15 @@
     }
 
     function updateStatusUI(type, text) {
-        if (!statusDot || !statusText) return;
-        statusDot.className = "status-dot " + type;
-        statusText.textContent = text;
+        if (statusDot) {
+            statusDot.className = "status-dot " + type;
+        }
+        if (menuStatusDot) {
+            menuStatusDot.className = "status-dot menu-status-dot " + type;
+        }
+        if (statusText) {
+            statusText.textContent = text;
+        }
     }
 
     function getLocalDataState() {
@@ -172,6 +179,13 @@
             }
 
             const fileInfo = await response.json();
+            
+            // Check if SHA matches before parsing and refreshing views
+            if (fileSha === fileInfo.sha) {
+                updateStatusUI("synced", "Đồng bộ thành công!");
+                return getLocalDataState();
+            }
+
             fileSha = fileInfo.sha;
 
             const base64Content = fileInfo.content.replace(/\s/g, '');
@@ -211,7 +225,8 @@
                     "Authorization": `Bearer ${config.token}`,
                     "Accept": "application/vnd.github+json"
                 },
-                cache: "no-store"
+                cache: "no-store",
+                keepalive: true
             });
 
             if (getResponse.ok) {
@@ -241,7 +256,8 @@
                     "Content-Type": "application/json",
                     "Accept": "application/vnd.github+json"
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                keepalive: true
             });
 
             if (!putResponse.ok) {
@@ -263,7 +279,36 @@
         }
     }
 
+    async function flushPendingPush() {
+        if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = null;
+            await pushToGitHub();
+        }
+    }
+
+    function startPolling() {
+        stopPolling();
+        const config = getGitHubConfig();
+        if (!config.token || !config.repo) return;
+
+        // Poll every 5 seconds
+        pollInterval = setInterval(async () => {
+            if (!debounceTimeout && !isPushing) {
+                await pullFromGitHub();
+            }
+        }, 5000);
+    }
+
+    function stopPolling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
+
     function syncToCloud() {
+        updateStatusUI("syncing", "Có thay đổi mới, chuẩn bị lưu...");
         if (debounceTimeout) clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
             pushToGitHub();
@@ -276,8 +321,9 @@
         repoInput = document.getElementById("ghRepo");
         branchInput = document.getElementById("ghBranch");
         pathInput = document.getElementById("ghPath");
-        statusDot = document.querySelector(".status-dot");
+        statusDot = document.querySelector(".settings-status .status-dot");
         statusText = document.querySelector(".status-text");
+        menuStatusDot = document.querySelector(".menu-status-dot");
         saveBtn = document.getElementById("settingsSaveBtn");
 
         // Load config into inputs
@@ -309,14 +355,17 @@
                 const data = await pullFromGitHub();
                 if (data) {
                     alert("Kết nối & Đồng bộ dữ liệu thành công!");
+                    startPolling();
                 } else {
                     // If cloud was empty, let's push local data up to populate it
                     const config = getGitHubConfig();
                     if (config.token && config.repo) {
                         await pushToGitHub();
                         alert("Kết nối thành công! Đã tạo tệp dữ liệu mới trên GitHub.");
+                        startPolling();
                     } else {
                         alert("Cấu hình trống hoặc lỗi kết nối. Vui lòng kiểm tra lại token/repo.");
+                        stopPolling();
                     }
                 }
             });
@@ -326,11 +375,48 @@
     // Export interface
     window.TinhTienGitHub = {
         syncToCloud,
-        pullFromGitHub
+        pullFromGitHub,
+        startPolling,
+        stopPolling
     };
 
     document.addEventListener("DOMContentLoaded", () => {
         initUI();
-        pullFromGitHub();
+        pullFromGitHub().then(() => {
+            if (document.visibilityState === "visible") {
+                startPolling();
+            }
+        });
+    });
+
+    // Listen for tab visibility changes and page exits to ensure changes are flushed immediately
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+            stopPolling();
+            flushPendingPush();
+        } else if (document.visibilityState === "visible") {
+            // Only pull if there are no pending changes locally to prevent overwriting
+            if (!debounceTimeout && !isPushing) {
+                pullFromGitHub().then(() => {
+                    startPolling();
+                });
+            } else {
+                startPolling();
+            }
+        }
+    });
+
+    window.addEventListener("pagehide", () => {
+        stopPolling();
+        flushPendingPush();
+    });
+
+    // Prevent page reload/close when sync is pending or in-progress (yellow status)
+    window.addEventListener("beforeunload", (event) => {
+        if (debounceTimeout !== null || isPushing) {
+            event.preventDefault();
+            event.returnValue = "Dữ liệu đang được đồng bộ lên đám mây. Bạn có chắc chắn muốn rời đi?";
+            return event.returnValue;
+        }
     });
 })();
