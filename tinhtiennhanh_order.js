@@ -277,6 +277,19 @@ function renderTotals() {
     renderOrderSummary();
     renderAutoOptions();
     renderManualTotals();
+
+    const payBtn = document.getElementById("orderPayBtn");
+    const finishBtn = document.getElementById("orderFinishBtn");
+    if (state.activeTable) {
+        const hasOrder = state.productCounts.size > 0;
+        const isPaid = localStorage.getItem(getPaidStorageKey(state.activeTable)) === "1";
+        if (payBtn) {
+            payBtn.disabled = !(hasOrder && !isPaid);
+        }
+        if (finishBtn) {
+            finishBtn.disabled = !hasOrder;
+        }
+    }
 }
 
 function renderOrderSummary() {
@@ -499,8 +512,8 @@ productGridEl.addEventListener("click", (event) => {
     }
 
     renderProducts();
-    renderTotals();
     saveOrder(true);
+    renderTotals();
 });
 
 cashGridEl.addEventListener("click", (event) => {

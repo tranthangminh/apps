@@ -4,6 +4,22 @@
         nodePath: "fastFoodFirebaseNodePath"
     };
 
+    window.TinhTienAuth = {
+        isUnlocked: function() {
+            const lastUnlock = localStorage.getItem("fastFoodUnlockTime");
+            if (!lastUnlock) return false;
+            const timePassed = Date.now() - parseInt(lastUnlock, 10);
+            return timePassed < 15 * 60 * 1000; // 15 minutes
+        },
+        unlock: function() {
+            localStorage.setItem("fastFoodUnlockTime", Date.now().toString());
+        },
+        lock: function() {
+            localStorage.removeItem("fastFoodUnlockTime");
+        },
+        promptPassword: null // Will be assigned in initUI
+    };
+
     // Pre-filled fallback default using the config you shared
     const defaultFirebaseConfig = {
         apiKey: "AIzaSyAqhQosLuAYZ5UHyvtyhWD-Z-gqz9hmRBE",
@@ -361,10 +377,79 @@
             pathInput.value = localStorage.getItem(configKeys.nodePath) || "shopData";
         }
 
+        const passwordModal = document.getElementById("passwordModal");
+        const adminPasswordInput = document.getElementById("adminPasswordInput");
+        const pwErrorMsg = document.getElementById("pwErrorMsg");
+        const cancelPasswordBtn = document.getElementById("cancelPasswordBtn");
+        const submitPasswordBtn = document.getElementById("submitPasswordBtn");
+
+        let currentAuthSuccess = null;
+        let currentAuthCancel = null;
+
+        window.TinhTienAuth.promptPassword = function(onSuccess, onCancel) {
+            currentAuthSuccess = onSuccess;
+            currentAuthCancel = onCancel;
+            if (adminPasswordInput) adminPasswordInput.value = "";
+            if (pwErrorMsg) pwErrorMsg.classList.add("is-hidden");
+            if (passwordModal) passwordModal.classList.remove("is-hidden");
+            setTimeout(() => {
+                if (adminPasswordInput) adminPasswordInput.focus();
+            }, 100);
+        };
+
         if (settingsBtn) {
             settingsBtn.addEventListener("click", () => {
                 if (typeof window.showView === "function") {
                     window.showView("settingsView");
+                }
+            });
+        }
+
+        if (cancelPasswordBtn && passwordModal) {
+            cancelPasswordBtn.addEventListener("click", () => {
+                passwordModal.classList.add("is-hidden");
+                if (typeof currentAuthCancel === "function") {
+                    currentAuthCancel();
+                }
+            });
+        }
+
+        function verifyAdminPassword() {
+            if (!adminPasswordInput || !passwordModal) return;
+            if (adminPasswordInput.value === "699002") {
+                window.TinhTienAuth.unlock(); // Cập nhật thời gian mở khóa thành công
+                passwordModal.classList.add("is-hidden");
+                if (typeof currentAuthSuccess === "function") {
+                    currentAuthSuccess();
+                }
+            } else {
+                if (pwErrorMsg) pwErrorMsg.classList.remove("is-hidden");
+                adminPasswordInput.value = "";
+                adminPasswordInput.focus();
+            }
+        }
+
+        if (submitPasswordBtn) {
+            submitPasswordBtn.addEventListener("click", verifyAdminPassword);
+        }
+
+        if (adminPasswordInput) {
+            adminPasswordInput.addEventListener("input", () => {
+                // Ẩn thông báo lỗi ngay khi bắt đầu gõ lại
+                if (pwErrorMsg) pwErrorMsg.classList.add("is-hidden");
+
+                // Chỉ cho phép nhập số
+                adminPasswordInput.value = adminPasswordInput.value.replace(/[^0-9]/g, "");
+                
+                // Tự động kiểm tra khi đủ 6 ký tự
+                if (adminPasswordInput.value.length === 6) {
+                    verifyAdminPassword();
+                }
+            });
+
+            adminPasswordInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    verifyAdminPassword();
                 }
             });
         }

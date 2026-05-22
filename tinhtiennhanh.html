@@ -75,6 +75,8 @@
             <div class="product-grid" id="productGrid"></div>
             <div class="product-clear-row">
                 <button class="table-back" type="button" id="tableBack">⤶</button>
+                <button class="order-pay-btn" type="button" id="orderPayBtn">💳 Trả</button>
+                <button class="order-finish-btn" type="button" id="orderFinishBtn">✅ Xong</button>
                 <button class="clear-all" type="button" id="clearAll">❌ Xóa hết ❌</button>
             </div>
         </section>
@@ -121,6 +123,24 @@
             </div>
         </div>
     </section>
+
+    <!-- Admin Password Modal -->
+    <div id="passwordModal" class="pw-modal is-hidden">
+        <div class="pw-modal-content">
+            <div class="pw-modal-header">
+                <h4>🔐 Xác thực Quản trị</h4>
+                <p>Vui lòng nhập mật khẩu để truy cập Cài đặt</p>
+            </div>
+            <div class="pw-modal-body">
+                <input type="password" id="adminPasswordInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="******">
+                <div id="pwErrorMsg" class="pw-error-msg is-hidden">Mật khẩu không chính xác!</div>
+            </div>
+            <div class="pw-modal-footer">
+                <button id="cancelPasswordBtn" class="pw-btn pw-cancel-btn">Hủy</button>
+                <button id="submitPasswordBtn" class="pw-btn pw-submit-btn">Đồng ý</button>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>

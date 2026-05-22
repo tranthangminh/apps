@@ -37,6 +37,30 @@ function renderTables() {
 }
 
 function showView(viewId) {
+    const restrictedViews = ["historyView", "statsView", "settingsView"];
+    if (restrictedViews.includes(viewId)) {
+        if (!window.TinhTienAuth || !window.TinhTienAuth.isUnlocked()) {
+            if (window.TinhTienAuth && window.TinhTienAuth.promptPassword) {
+                window.TinhTienAuth.promptPassword(
+                    () => {
+                        showView(viewId);
+                        if (viewId === "historyView" && window.TinhTienHistory) {
+                            window.TinhTienHistory.renderHistory();
+                        } else if (viewId === "statsView" && window.TinhTienStats) {
+                            window.TinhTienStats.renderStats();
+                        }
+                    },
+                    () => {
+                        showTableView();
+                    }
+                );
+            } else {
+                showTableView();
+            }
+            return;
+        }
+    }
+
     const views = ["tableView", "orderView", "historyView", "statsView", "settingsView"];
     views.forEach(id => {
         const el = document.getElementById(id);
@@ -66,7 +90,7 @@ function showTableView() {
 
 function showOrderView(tableId) {
     window.TinhTienOrder.setActiveTable(tableId);
-    tableBackEl.textContent = `⤶ Bàn ${tableId}`;
+    tableBackEl.textContent = `⤶ ${tableId}`;
     showView("orderView");
 }
 
@@ -130,6 +154,29 @@ tableBackEl.addEventListener("click", () => {
 const tablesBtn = document.getElementById("tablesBtn");
 if (tablesBtn) {
     tablesBtn.addEventListener("click", showTableView);
+}
+
+const orderPayBtn = document.getElementById("orderPayBtn");
+const orderFinishBtn = document.getElementById("orderFinishBtn");
+
+if (orderPayBtn) {
+    orderPayBtn.addEventListener("click", () => {
+        const activeTable = window.TinhTienOrder.getActiveTable ? window.TinhTienOrder.getActiveTable() : null;
+        if (activeTable) {
+            window.TinhTienOrder.markTablePaid(activeTable);
+            showTableView();
+        }
+    });
+}
+
+if (orderFinishBtn) {
+    orderFinishBtn.addEventListener("click", () => {
+        const activeTable = window.TinhTienOrder.getActiveTable ? window.TinhTienOrder.getActiveTable() : null;
+        if (activeTable) {
+            window.TinhTienOrder.clearTableOrder(activeTable);
+            showTableView();
+        }
+    });
 }
 
 window.TinhTienOrder.initOrder();
