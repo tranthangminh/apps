@@ -58,7 +58,8 @@
     letter-spacing: 0.02em;
 }
 
-.settings-group input {
+.settings-group input,
+.settings-group textarea {
     padding: 10px 12px;
     border: 1px solid rgba(51, 51, 51, 0.15);
     border-radius: 8px;
@@ -70,7 +71,15 @@
     transition: all 0.2s;
 }
 
-.settings-group input:focus {
+.settings-group textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    font-size: 12px;
+}
+
+.settings-group input:focus,
+.settings-group textarea:focus {
     border-color: var(--accent-strong);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);

@@ -102,24 +102,16 @@
     <section class="settings-view is-hidden" id="settingsView" aria-label="Cài đặt">
         <div class="settings-content">
             <div class="settings-header">
-                <h3>Cài đặt GitHub Sync</h3>
+                <h3>Cài đặt Firebase Sync</h3>
             </div>
             <div class="settings-body">
                 <div class="settings-group">
-                    <label for="ghToken">Personal Access Token (PAT)</label>
-                    <input type="password" id="ghToken" placeholder="github_pat_...">
+                    <label for="fbConfig">Cấu hình Firebase (JSON / JS Code)</label>
+                    <textarea id="fbConfig" placeholder="Dán đoạn mã firebaseConfig vào đây..."></textarea>
                 </div>
                 <div class="settings-group">
-                    <label for="ghRepo">Repository Name</label>
-                    <input type="text" id="ghRepo" placeholder="tranthangminh/apps">
-                </div>
-                <div class="settings-group">
-                    <label for="ghBranch">Branch</label>
-                    <input type="text" id="ghBranch" value="main" placeholder="main">
-                </div>
-                <div class="settings-group">
-                    <label for="ghPath">Filename Path</label>
-                    <input type="text" id="ghPath" value="tinhtiennhanh/data.json" placeholder="tinhtiennhanh/data.json">
+                    <label for="fbPath">Đường dẫn dữ liệu (Node Path)</label>
+                    <input type="text" id="fbPath" value="shopData" placeholder="shopData">
                 </div>
                 <div class="settings-status" id="settingsStatus">
                     <span class="status-dot"></span>
@@ -131,6 +123,8 @@
     </section>
 </main>
 
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="./tinhtiennhanh-settings.js?v=20260521-15"></script>
 <script src="./tinhtiennhanh_order.js?v=20260521-15"></script>
 <script src="./tinhtiennhanh_table.js?v=20260521-15"></script>

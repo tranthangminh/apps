@@ -1,51 +1,65 @@
 (function () {
     const configKeys = {
-        token: "fastFoodGitHubToken",
-        repo: "fastFoodGitHubRepo",
-        branch: "fastFoodGitHubBranch",
-        path: "fastFoodGitHubPath"
+        firebaseConfig: "fastFoodFirebaseConfig",
+        nodePath: "fastFoodFirebaseNodePath"
     };
 
-    let fileSha = null;
+    // Pre-filled fallback default using the config you shared
+    const defaultFirebaseConfig = {
+        apiKey: "AIzaSyAqhQosLuAYZ5UHyvtyhWD-Z-gqz9hmRBE",
+        authDomain: "appstinhtiennhanh.firebaseapp.com",
+        projectId: "appstinhtiennhanh",
+        storageBucket: "appstinhtiennhanh.firebasestorage.app",
+        messagingSenderId: "254951485113",
+        appId: "1:254951485113:web:1ea6511548ff3938c13568",
+        measurementId: "G-066SNSCHC3",
+        databaseURL: "https://appstinhtiennhanh-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+
+    let firebaseApp = null;
+    let dbRef = null;
     let debounceTimeout = null;
-    let isPushing = false;
-    let pushPending = false;
-    let pollInterval = null;
+    let isWriting = false;
+    let writePending = false;
+    let idleCheckInterval = null;
+    let lastInteractionTime = 0;
+    let localDataPendingUpdate = null;
 
     // Elements
-    let settingsBtn, tokenInput, repoInput, branchInput, pathInput, statusDot, statusText, saveBtn, menuStatusDot;
+    let settingsBtn, configInput, pathInput, statusDot, statusText, saveBtn, menuStatusDot;
 
-    function getGitHubConfig() {
-        return {
-            token: localStorage.getItem(configKeys.token) || "",
-            repo: localStorage.getItem(configKeys.repo) || "tranthangminh/apps",
-            branch: localStorage.getItem(configKeys.branch) || "main",
-            path: localStorage.getItem(configKeys.path) || "tinhtiennhanh/data.json"
-        };
+    function getFirebaseConfigStr() {
+        return localStorage.getItem(configKeys.firebaseConfig) || "";
     }
 
-    function saveGitHubConfig(token, repo, branch, path) {
-        localStorage.setItem(configKeys.token, token.trim());
-        localStorage.setItem(configKeys.repo, repo.trim());
-        localStorage.setItem(configKeys.branch, branch.trim() || "main");
-        localStorage.setItem(configKeys.path, path.trim() || "data.json");
+    function saveFirebaseConfig(configStr, nodePath) {
+        localStorage.setItem(configKeys.firebaseConfig, configStr.trim());
+        localStorage.setItem(configKeys.nodePath, nodePath.trim() || "shopData");
     }
 
-    function decodeBase64Utf8(str) {
-        return decodeURIComponent(
-            atob(str)
-                .split("")
-                .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-                .join("")
-        );
-    }
-
-    function encodeBase64Utf8(str) {
-        return btoa(
-            encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
-                String.fromCharCode(parseInt(p1, 16))
-            )
-        );
+    function parseFirebaseConfig(inputStr) {
+        if (!inputStr) return null;
+        try {
+            return JSON.parse(inputStr);
+        } catch (e) {
+            const config = {};
+            const keys = ["apiKey", "authDomain", "databaseURL", "projectId", "storageBucket", "messagingSenderId", "appId", "measurementId"];
+            
+            let matchedAny = false;
+            keys.forEach(key => {
+                const regex = new RegExp(`[\\s"']${key}[\\s"']?:\\s*["']([^"']+)["']`);
+                const match = inputStr.match(regex);
+                if (match && match[1]) {
+                    config[key] = match[1];
+                    matchedAny = true;
+                }
+            });
+            
+            if (matchedAny && config.apiKey && config.projectId) {
+                return config;
+            }
+            return null;
+        }
     }
 
     function updateStatusUI(type, text) {
@@ -149,132 +163,139 @@
         }
     }
 
-    async function pullFromGitHub() {
-        const config = getGitHubConfig();
-        if (!config.token || !config.repo) {
-            updateStatusUI("", "Chưa cấu hình đồng bộ GitHub");
-            return null;
+    function applyFirebaseData(data) {
+        localDataPendingUpdate = null;
+        const localData = getLocalDataState();
+        
+        // Compare states to avoid unnecessary redraws
+        if (JSON.stringify(localData) === JSON.stringify(data)) {
+            updateStatusUI("synced", "Đồng bộ thành công!");
+            return;
+        }
+        
+        setLocalDataState(data);
+        updateStatusUI("synced", "Đồng bộ thành công!");
+        refreshAllViews();
+    }
+
+    function handleFirebaseUpdate(snapshot) {
+        const data = snapshot.val();
+        if (!data) {
+            // Database is empty, push local state to initialize it
+            updateStatusUI("synced", "Đã kết nối (Firebase trống)");
+            const localData = getLocalDataState();
+            if (localData && (Object.keys(localData.orders || {}).length > 0 || (localData.history && localData.history.length > 0))) {
+                pushToFirebase();
+            }
+            return;
         }
 
-        updateStatusUI("syncing", "Đang đồng bộ dữ liệu...");
+        if (debounceTimeout || isWriting) {
+            return;
+        }
 
-        const url = `https://api.github.com/repos/${config.repo}/contents/${config.path}?ref=${config.branch}&t=${Date.now()}`;
+        // Delay updating if user is ordering or actively interacting
+        if (isOrderViewActive() || (Date.now() - lastInteractionTime < 8000)) {
+            localDataPendingUpdate = data;
+            updateStatusUI("synced", "Đồng bộ sẵn sàng (Chờ rảnh)");
+            return;
+        }
+
+        applyFirebaseData(data);
+    }
+
+    async function initFirebase() {
+        if (dbRef) {
+            dbRef.off();
+            dbRef = null;
+        }
+
+        let configStr = getFirebaseConfigStr();
+        const nodePath = localStorage.getItem(configKeys.nodePath) || "shopData";
+
+        let config = null;
+        if (configStr) {
+            config = parseFirebaseConfig(configStr);
+        } else {
+            // Use defaults if first load
+            config = defaultFirebaseConfig;
+            configStr = JSON.stringify(defaultFirebaseConfig, null, 2);
+            localStorage.setItem(configKeys.firebaseConfig, configStr);
+        }
+
+        if (configInput && !configInput.value) {
+            configInput.value = configStr;
+        }
+
+        if (!config || !config.apiKey || !config.projectId) {
+            updateStatusUI("", "Chưa cấu hình đồng bộ Firebase");
+            return;
+        }
+
+        // Default to Singapore database region if databaseURL is missing
+        if (!config.databaseURL) {
+            config.databaseURL = `https://${config.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
+        }
+
         try {
-            const response = await fetch(url, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${config.token}`,
-                    "Accept": "application/vnd.github+json"
-                },
-                cache: "no-store"
-            });
-
-            if (response.status === 404) {
-                updateStatusUI("synced", "Đã kết nối (GitHub trống)");
-                return null;
+            if (typeof firebase === "undefined") {
+                throw new Error("Không thể tải thư viện Firebase. Kiểm tra kết nối mạng.");
             }
-
-            if (!response.ok) {
-                throw new Error(`Mã lỗi HTTP: ${response.status}`);
-            }
-
-            const fileInfo = await response.json();
             
-            // Check if SHA matches before parsing and refreshing views
-            if (fileSha === fileInfo.sha) {
-                updateStatusUI("synced", "Đồng bộ thành công!");
-                return getLocalDataState();
+            if (firebase.apps.length === 0) {
+                firebaseApp = firebase.initializeApp(config);
+            } else {
+                firebaseApp = firebase.app();
             }
 
-            fileSha = fileInfo.sha;
-
-            const base64Content = fileInfo.content.replace(/\s/g, '');
-            const jsonString = decodeBase64Utf8(base64Content);
-            const data = JSON.parse(jsonString);
-
-            setLocalDataState(data);
-            updateStatusUI("synced", "Đồng bộ thành công!");
-            refreshAllViews();
-            return data;
-        } catch (error) {
-            console.error("Failed to pull from GitHub:", error);
-            updateStatusUI("error", `Lỗi đồng bộ: ${error.message}`);
-            return null;
+            updateStatusUI("syncing", "Đang kết nối Firebase...");
+            dbRef = firebase.database().ref(nodePath);
+            dbRef.on("value", handleFirebaseUpdate, (error) => {
+                console.error("Firebase connection error:", error);
+                updateStatusUI("error", `Lỗi kết nối: ${error.message}`);
+            });
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            updateStatusUI("error", `Lỗi khởi tạo: ${e.message}`);
         }
     }
 
-    async function pushToGitHub() {
-        const config = getGitHubConfig();
-        if (!config.token || !config.repo) return;
+    async function pullFromFirebase() {
+        if (!dbRef) return getLocalDataState();
+        try {
+            const snapshot = await dbRef.once("value");
+            const data = snapshot.val();
+            if (data) {
+                applyFirebaseData(data);
+                return data;
+            }
+        } catch (e) {
+            console.error("Firebase manual pull failed:", e);
+        }
+        return getLocalDataState();
+    }
 
-        if (isPushing) {
-            pushPending = true;
+    async function pushToFirebase() {
+        if (!dbRef) return;
+        if (isWriting) {
+            writePending = true;
             return;
         }
-        isPushing = true;
-        pushPending = false;
+        isWriting = true;
+        writePending = false;
 
         updateStatusUI("syncing", "Đang tự động lưu...");
-
+        const localData = getLocalDataState();
         try {
-            // Fetch latest SHA to prevent conflicts
-            const getUrl = `https://api.github.com/repos/${config.repo}/contents/${config.path}?ref=${config.branch}&t=${Date.now()}`;
-            const getResponse = await fetch(getUrl, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${config.token}`,
-                    "Accept": "application/vnd.github+json"
-                },
-                cache: "no-store",
-                keepalive: true
-            });
-
-            if (getResponse.ok) {
-                const fileInfo = await getResponse.json();
-                fileSha = fileInfo.sha;
-            }
-
-            const localData = getLocalDataState();
-            const jsonString = JSON.stringify(localData, null, 2);
-            const base64Content = encodeBase64Utf8(jsonString);
-
-            const payload = {
-                message: "Tự động lưu dữ liệu TinhTienNhanh",
-                content: base64Content,
-                branch: config.branch
-            };
-
-            if (fileSha) {
-                payload.sha = fileSha;
-            }
-
-            const putUrl = `https://api.github.com/repos/${config.repo}/contents/${config.path}`;
-            const putResponse = await fetch(putUrl, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `Bearer ${config.token}`,
-                    "Content-Type": "application/json",
-                    "Accept": "application/vnd.github+json"
-                },
-                body: JSON.stringify(payload),
-                keepalive: true
-            });
-
-            if (!putResponse.ok) {
-                throw new Error(`Mã lỗi HTTP: ${putResponse.status}`);
-            }
-
-            const putResult = await putResponse.json();
-            fileSha = putResult.content.sha;
-
+            await dbRef.set(localData);
             updateStatusUI("synced", "Đã lưu lên đám mây!");
-        } catch (error) {
-            console.error("Failed to push to GitHub:", error);
-            updateStatusUI("error", `Lỗi lưu dữ liệu: ${error.message}`);
+        } catch (e) {
+            console.error("Firebase push failed:", e);
+            updateStatusUI("error", `Lỗi lưu dữ liệu: ${e.message}`);
         } finally {
-            isPushing = false;
-            if (pushPending) {
-                pushToGitHub();
+            isWriting = false;
+            if (writePending) {
+                pushToFirebase();
             }
         }
     }
@@ -283,27 +304,33 @@
         if (debounceTimeout) {
             clearTimeout(debounceTimeout);
             debounceTimeout = null;
-            await pushToGitHub();
+            await pushToFirebase();
         }
     }
 
-    function startPolling() {
-        stopPolling();
-        const config = getGitHubConfig();
-        if (!config.token || !config.repo) return;
-
-        // Poll every 5 seconds
-        pollInterval = setInterval(async () => {
-            if (!debounceTimeout && !isPushing) {
-                await pullFromGitHub();
-            }
-        }, 5000);
+    function isOrderViewActive() {
+        const orderView = document.getElementById("orderView");
+        return orderView && !orderView.classList.contains("is-hidden");
     }
 
-    function stopPolling() {
-        if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
+    function recordInteraction() {
+        lastInteractionTime = Date.now();
+    }
+
+    function startIdleCheck() {
+        stopIdleCheck();
+        idleCheckInterval = setInterval(() => {
+            // Apply pending update if user is idle and not on order screen
+            if (localDataPendingUpdate && !isOrderViewActive() && (Date.now() - lastInteractionTime >= 8000)) {
+                applyFirebaseData(localDataPendingUpdate);
+            }
+        }, 2000);
+    }
+
+    function stopIdleCheck() {
+        if (idleCheckInterval) {
+            clearInterval(idleCheckInterval);
+            idleCheckInterval = null;
         }
     }
 
@@ -311,29 +338,29 @@
         updateStatusUI("syncing", "Có thay đổi mới, chuẩn bị lưu...");
         if (debounceTimeout) clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
-            pushToGitHub();
-        }, 1500); // 1.5s debounce for snappiness
+            debounceTimeout = null;
+            pushToFirebase();
+        }, 1500);
     }
 
     function initUI() {
         settingsBtn = document.getElementById("settingsBtn");
-        tokenInput = document.getElementById("ghToken");
-        repoInput = document.getElementById("ghRepo");
-        branchInput = document.getElementById("ghBranch");
-        pathInput = document.getElementById("ghPath");
+        configInput = document.getElementById("fbConfig");
+        pathInput = document.getElementById("fbPath");
         statusDot = document.querySelector(".settings-status .status-dot");
         statusText = document.querySelector(".status-text");
         menuStatusDot = document.querySelector(".menu-status-dot");
         saveBtn = document.getElementById("settingsSaveBtn");
 
         // Load config into inputs
-        const config = getGitHubConfig();
-        if (tokenInput) tokenInput.value = config.token;
-        if (repoInput) repoInput.value = config.repo;
-        if (branchInput) branchInput.value = config.branch;
-        if (pathInput) pathInput.value = config.path;
+        const configStr = getFirebaseConfigStr();
+        if (configInput) {
+            configInput.value = configStr || JSON.stringify(defaultFirebaseConfig, null, 2);
+        }
+        if (pathInput) {
+            pathInput.value = localStorage.getItem(configKeys.nodePath) || "shopData";
+        }
 
-        // Toggle Active Tab Settings View
         if (settingsBtn) {
             settingsBtn.addEventListener("click", () => {
                 if (typeof window.showView === "function") {
@@ -342,78 +369,74 @@
             });
         }
 
-        // Save action
         if (saveBtn) {
             saveBtn.addEventListener("click", async () => {
-                saveGitHubConfig(
-                    tokenInput.value,
-                    repoInput.value,
-                    branchInput.value,
-                    pathInput.value
-                );
-                updateStatusUI("syncing", "Đang kiểm tra kết nối...");
-                const data = await pullFromGitHub();
-                if (data) {
-                    alert("Kết nối & Đồng bộ dữ liệu thành công!");
-                    startPolling();
-                } else {
-                    // If cloud was empty, let's push local data up to populate it
-                    const config = getGitHubConfig();
-                    if (config.token && config.repo) {
-                        await pushToGitHub();
-                        alert("Kết nối thành công! Đã tạo tệp dữ liệu mới trên GitHub.");
-                        startPolling();
-                    } else {
-                        alert("Cấu hình trống hoặc lỗi kết nối. Vui lòng kiểm tra lại token/repo.");
-                        stopPolling();
-                    }
+                const configVal = configInput.value;
+                const pathVal = pathInput.value;
+                
+                const parsed = parseFirebaseConfig(configVal);
+                if (!parsed) {
+                    alert("Cấu hình Firebase không hợp lệ! Vui lòng kiểm tra lại định dạng.");
+                    return;
                 }
+
+                saveFirebaseConfig(configVal, pathVal);
+                updateStatusUI("syncing", "Đang kết nối lại Firebase...");
+                await initFirebase();
+                alert("Đã lưu cấu hình Firebase thành công!");
             });
         }
     }
 
-    // Export interface
+    // Export interface under TinhTienGitHub to maintain backwards compatibility with existing order/table scripts
     window.TinhTienGitHub = {
         syncToCloud,
-        pullFromGitHub,
-        startPolling,
-        stopPolling
+        pullFromGitHub: pullFromFirebase,
+        startPolling: startIdleCheck,
+        stopPolling: stopIdleCheck
     };
 
-    document.addEventListener("DOMContentLoaded", () => {
+    function init() {
         initUI();
-        pullFromGitHub().then(() => {
+        initFirebase().then(() => {
             if (document.visibilityState === "visible") {
-                startPolling();
+                startIdleCheck();
             }
         });
-    });
 
-    // Listen for tab visibility changes and page exits to ensure changes are flushed immediately
+        document.addEventListener("pointerdown", recordInteraction, { passive: true });
+        document.addEventListener("keydown", recordInteraction, { passive: true });
+        document.addEventListener("scroll", recordInteraction, { capture: true, passive: true });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
-            stopPolling();
+            stopIdleCheck();
             flushPendingPush();
         } else if (document.visibilityState === "visible") {
-            // Only pull if there are no pending changes locally to prevent overwriting
-            if (!debounceTimeout && !isPushing) {
-                pullFromGitHub().then(() => {
-                    startPolling();
+            if (!debounceTimeout && !isWriting && !isOrderViewActive()) {
+                pullFromFirebase().then(() => {
+                    startIdleCheck();
                 });
             } else {
-                startPolling();
+                startIdleCheck();
             }
         }
     });
 
     window.addEventListener("pagehide", () => {
-        stopPolling();
+        stopIdleCheck();
         flushPendingPush();
     });
 
-    // Prevent page reload/close when sync is pending or in-progress (yellow status)
     window.addEventListener("beforeunload", (event) => {
-        if (debounceTimeout !== null || isPushing) {
+        if (debounceTimeout !== null || isWriting) {
             event.preventDefault();
             event.returnValue = "Dữ liệu đang được đồng bộ lên đám mây. Bạn có chắc chắn muốn rời đi?";
             return event.returnValue;
