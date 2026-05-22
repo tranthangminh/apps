@@ -8,6 +8,8 @@
 
     let fileSha = null;
     let debounceTimeout = null;
+    let isPushing = false;
+    let pushPending = false;
 
     // Elements
     let settingsBtn, tokenInput, repoInput, branchInput, pathInput, statusDot, statusText, saveBtn;
@@ -149,14 +151,15 @@
 
         updateStatusUI("syncing", "Đang đồng bộ dữ liệu...");
 
-        const url = `https://api.github.com/repos/${config.repo}/contents/${config.path}?ref=${config.branch}`;
+        const url = `https://api.github.com/repos/${config.repo}/contents/${config.path}?ref=${config.branch}&t=${Date.now()}`;
         try {
             const response = await fetch(url, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${config.token}`,
                     "Accept": "application/vnd.github+json"
-                }
+                },
+                cache: "no-store"
             });
 
             if (response.status === 404) {
@@ -190,17 +193,25 @@
         const config = getGitHubConfig();
         if (!config.token || !config.repo) return;
 
+        if (isPushing) {
+            pushPending = true;
+            return;
+        }
+        isPushing = true;
+        pushPending = false;
+
         updateStatusUI("syncing", "Đang tự động lưu...");
 
         try {
             // Fetch latest SHA to prevent conflicts
-            const getUrl = `https://api.github.com/repos/${config.repo}/contents/${config.path}?ref=${config.branch}`;
+            const getUrl = `https://api.github.com/repos/${config.repo}/contents/${config.path}?ref=${config.branch}&t=${Date.now()}`;
             const getResponse = await fetch(getUrl, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${config.token}`,
                     "Accept": "application/vnd.github+json"
-                }
+                },
+                cache: "no-store"
             });
 
             if (getResponse.ok) {
@@ -244,6 +255,11 @@
         } catch (error) {
             console.error("Failed to push to GitHub:", error);
             updateStatusUI("error", `Lỗi lưu dữ liệu: ${error.message}`);
+        } finally {
+            isPushing = false;
+            if (pushPending) {
+                pushToGitHub();
+            }
         }
     }
 
